@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+    
+    <import resource="spring-test-infrastructure.xml"/>
+    <import resource="spring-jmsconsumer-core.xml"/>
+
+
+    <bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="jmsConnectionFactory"/>
+    </bean>
+
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate" >
+        <constructor-arg index="0" ref="dataSource"/>
+    </bean>
+
+    <bean id="throwExceptionAspectBean" class="pl.marekstrejczek.jmsconsumer.aop.ThrowExceptionAspectBean"/>
+
+    <bean id="integrityTestSteps" class="pl.marekstrejczek.jmsconsumer.IntegrityTestSteps" >
+        <constructor-arg index="0" ref="jmsTemplate"/>
+        <constructor-arg index="1" ref="jdbcTemplate"/>
+    </bean>
+
+    <aop:config>
+        <aop:aspect id="throwExceptionAspect" ref="throwExceptionAspectBean">
+            <aop:pointcut id="beforeDoHeavyProcessing" expression="execution(* pl.marekstrejczek.jmsconsumer.service.*.*(..))"/>
+            <aop:before pointcut-ref="beforeDoHeavyProcessing" method="throwException" />
+        </aop:aspect>
+    </aop:config>
+
+</beans>

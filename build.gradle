@@ -1,0 +1,73 @@
+apply plugin: 'war'
+apply plugin: 'jetty'
+
+sourceCompatibility = 1.7
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    springVersion = '3.2.8.RELEASE'
+    camelVersion = '2.13.1'
+    activemqVersion = '5.9.1'
+    atomikosVersion = '3.9.3'
+    hsqldbVersion = "2.3.2"
+    jbehaveVersion = '3.9.2'
+    junitVersion = '4.11'
+}
+
+libraries = [
+        spring: [ // Groovy list literal
+                  "org.springframework:spring-core:${springVersion}",
+                  "org.springframework:spring-tx:${springVersion}",
+                  "org.springframework:spring-jms:${springVersion}",
+                  "org.springframework:spring-jdbc:${springVersion}",
+                  "org.springframework:spring-aop:${springVersion}",
+                  "org.springframework:spring-web:${springVersion}"
+        ],
+
+        camel: [
+                "org.apache.camel:camel-core:${camelVersion}",
+                "org.apache.camel:camel-jms:${camelVersion}",
+                "org.apache.camel:camel-spring:${camelVersion}",
+                "org.apache.camel:camel-sql:${camelVersion}",
+        ],
+
+        atomikos: [
+                "com.atomikos:transactions-jta:${atomikosVersion}",
+                "com.atomikos:transactions-jms:${atomikosVersion}",
+                "com.atomikos:transactions-jdbc:${atomikosVersion}"
+        ],
+
+        activemqCore: [
+                "org.apache.activemq:activemq-broker:${activemqVersion}",
+                "org.apache.activemq:activemq-kahadb-store:${activemqVersion}",
+                "org.apache.activemq:activemq-spring:${activemqVersion}",
+        ],
+
+        activemqCamel: [
+                "org.apache.activemq:activemq-camel:${activemqVersion}"
+        ],
+
+        jbehave: [
+                "org.jbehave:jbehave-core:${jbehaveVersion}",
+                "org.jbehave:jbehave-spring:${jbehaveVersion}"
+        ]
+]
+
+dependencies {
+    compile libraries.spring
+    compile libraries.camel
+    compile libraries.activemqCamel
+    testCompile libraries.activemqCore
+    compile "log4j:log4j:1.2.17"
+    testCompile libraries.jbehave
+    testCompile libraries.atomikos
+    testCompile "org.apache.xbean:xbean-spring:3.18"
+    testCompile "org.hsqldb:hsqldb:${hsqldbVersion}"
+    testCompile "org.aspectj:aspectjweaver:1.8.0"
+    testCompile "junit:junit:${junitVersion}"
+    providedRuntime "org.jboss.spec:jboss-javaee-6.0:1.0.0.Final"
+}

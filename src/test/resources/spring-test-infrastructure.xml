@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:amq="http://activemq.apache.org/schema/core"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+    <bean id="atomikosTransactionManager" class="com.atomikos.icatch.jta.UserTransactionManager"
+          init-method="init" destroy-method="close">
+        <property name="forceShutdown" value="false" />
+    </bean>
+
+    <bean id="atomikosUserTransaction" class="com.atomikos.icatch.jta.UserTransactionImp">
+        <property name="transactionTimeout" value="300" />
+    </bean>
+
+    <bean id="jtaTransactionManager"
+          class="org.springframework.transaction.jta.JtaTransactionManager">
+        <property name="transactionManager" ref="atomikosTransactionManager" />
+        <property name="userTransaction" ref="atomikosUserTransaction" />
+    </bean>
+
+    <!-- Set up XA-compliant JMS connection factories -->
+    <amq:broker id="amq-broker">
+        <amq:transportConnectors>
+            <amq:transportConnector uri="tcp://localhost:62616?deleteAllMessagesOnStartup=true" />
+        </amq:transportConnectors>
+    </amq:broker>
+
+    <amq:connectionFactory id="jmsConnectionFactory" brokerURL="tcp://localhost:62616" >
+        <amq:properties>
+            <amq:redeliveryPolicy maximumRedeliveries="1"/>
+        </amq:properties>
+    </amq:connectionFactory>
+
+    <amq:xaConnectionFactory id="amqXaJmsConnectionFactory" brokerURL="tcp://localhost:62616" >
+        <amq:properties>
+            <amq:redeliveryPolicy maximumRedeliveries="1"/>
+        </amq:properties>
+    </amq:xaConnectionFactory>
+
+    <bean id="xaJmsConnectionFactory" class="com.atomikos.jms.AtomikosConnectionFactoryBean"
+          init-method="init" destroy-method="close" depends-on="amq-broker">
+        <property name="uniqueResourceName" value="XA-JMS-ATOMIKOS" />
+        <property name="localTransactionMode" value="false" />
+        <property name="poolSize" value="4" />
+        <property name="xaConnectionFactory" ref="amqXaJmsConnectionFactory" />
+    </bean>
+
+    <!-- Set up XA-compliant HSQLDB data source -->
+    <bean id="hsqldbServer" class="pl.marekstrejczek.jmsconsumer.hsqldb.MyHsqlServer" init-method="start" destroy-method="stop">
+        <constructor-arg index="0" value="test-db"/>
+        <constructor-arg index="1" value="mem:test-db"/>
+        <property name="noSystemExit" value="true"/>
+    </bean>
+
+    <bean id="hsqldbXADataSource" class="org.hsqldb.jdbc.pool.JDBCXADataSource"
+          lazy-init="true" depends-on="hsqldbServer">
+        <property name="user" value="sa" />
+        <property name="password" value="" />
+        <property name="url" value="jdbc:hsqldb:mem:test-db" />
+    </bean>
+
+    <bean id="dataSource" class="org.hsqldb.jdbc.JDBCDataSource"
+          lazy-init="true" depends-on="hsqldbServer">
+        <property name="user" value="sa" />
+        <property name="password" value="" />
+        <property name="url" value="jdbc:hsqldb:mem:test-db" />
+    </bean>
+
+    <bean id="xaDataSource" class="com.atomikos.jdbc.AtomikosDataSourceBean"
+          init-method="init" destroy-method="close">
+        <property name="uniqueResourceName" value="XA-DB-ATOMIKOS" />
+        <property name="maxPoolSize" value="3" />
+        <property name="minPoolSize" value="1" />
+        <property name="maxIdleTime" value="150" />
+        <property name="reapTimeout" value="5" />
+        <property name="testQuery" value="select 1 as x from information_schema.tables where 1=0" />
+        <property name="xaDataSource" ref="hsqldbXADataSource" />
+    </bean>
+</beans>
